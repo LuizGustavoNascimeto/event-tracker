@@ -1,0 +1,71 @@
+import Kalend, { CalendarEvent, CalendarView, OnEventDragFinish } from "kalend";
+import "kalend/dist/styles/index.css";
+import React from "react";
+import useAtualizarEvento from "../../state/useAtualizarEvento";
+import useListaDeEvento from "../../state/useListaDeEventos";
+import style from "./Calendario.module.scss";
+import ptBR from "./localizacao/ptBR.json";
+
+interface IKalendEvento {
+  id?: number;
+  startAt: string;
+  endAt: string;
+  summary: string;
+  color: string;
+}
+
+const Calendario: React.FC = () => {
+  const eventosKalend = new Map<string, IKalendEvento[]>();
+
+  const eventos = useListaDeEvento();
+
+  const atualizarEvento = useAtualizarEvento();
+
+  eventos.forEach((evento) => {
+    const chave = evento.inicio.toISOString().slice(0, 10);
+    if (!eventosKalend.has(chave)) {
+      eventosKalend.set(chave, []);
+    }
+    eventosKalend.get(chave)?.push({
+      id: evento.id,
+      startAt: evento.inicio.toISOString(),
+      endAt: evento.fim.toISOString(),
+      summary: evento.descricao,
+      color: "blue",
+    });
+  });
+
+  const onEventDragFinish: OnEventDragFinish = (
+    kalendarEventoInalterado: CalendarEvent,
+    kalendarEventoAtualizado: CalendarEvent
+  ) => {
+    const evento = eventos.find(
+      (evento) => evento.id === kalendarEventoAtualizado.id
+    );
+    if (evento) {
+      const eventoAtualizado = { ...evento };
+      eventoAtualizado.inicio = new Date(kalendarEventoAtualizado.startAt);
+      eventoAtualizado.fim = new Date(kalendarEventoAtualizado.endAt);
+      atualizarEvento(eventoAtualizado);
+    }
+  };
+
+  return (
+    <div className={style.Container}>
+      <Kalend
+        events={Object.fromEntries(eventosKalend)}
+        initialDate={new Date().toISOString()}
+        hourHeight={60}
+        initialView={CalendarView.WEEK}
+        timeFormat={"24"}
+        weekDayStart={"Monday"}
+        calendarIDsHidden={["work"]}
+        language={"customLanguage"}
+        customLanguage={ptBR}
+        onEventDragFinish={onEventDragFinish}
+      />
+    </div>
+  );
+};
+
+export default Calendario;
